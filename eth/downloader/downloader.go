@@ -53,9 +53,11 @@ var (
 	reorgProtThreshold   = 48 // Threshold number of recent blocks to disable mini reorg protection
 	reorgProtHeaderDelay = 2  // Number of headers to delay delivering to cover mini reorgs
 
-	fsHeaderSafetyNet = 2048            // Number of headers to discard in case a chain violation is detected
-	fsHeaderContCheck = 3 * time.Second // Time interval to check for header continuations during state download
-	fsMinFullBlocks   = 64              // Number of blocks to retrieve fully even in snap sync
+	fsHeaderCheckFrequency = 100             // Verification frequency of the downloaded headers during snap sync
+	fsHeaderSafetyNet      = 2048            // Number of headers to discard in case a chain violation is detected
+	fsHeaderForceVerify    = 24              // Number of headers to verify before and after the pivot to accept it
+	fsHeaderContCheck      = 3 * time.Second // Time interval to check for header continuations during state download
+	fsMinFullBlocks        = 64              // Number of blocks to retrieve fully even in snap sync
 )
 
 var (
@@ -173,7 +175,7 @@ type LightChain interface {
 	GetTd(common.Hash, uint64) *big.Int
 
 	// InsertHeaderChain inserts a batch of headers into the local chain.
-	InsertHeaderChain([]*types.Header) (int, error)
+	InsertHeaderChain([]*types.Header, int) (int, error)
 
 	// SetHead rewinds the local chain to a new head.
 	SetHead(uint64) error
@@ -1273,9 +1275,34 @@ func (d *Downloader) fetchReceipts(from uint64, beaconMode bool) error {
 // queue until the stream ends or a failure occurs.
 func (d *Downloader) processHeaders(origin uint64, td, ttd *big.Int, beaconMode bool) error {
 	var (
-		mode       = d.getMode()
-		gotHeaders = false // Wait for batches of headers to process
+		rollback    uint64 // Zero means no rollback (fine as you can't unroll the genesis)
+		rollbackErr error
+		mode        = d.getMode()
+		gotHeaders  = false // Wait for batches of headers to process
 	)
+	defer func() {
+		if rollback > 0 {
+			lastHeader, lastFastBlock, lastBlock := d.lightchain.CurrentHeader().Number, common.Big0, common.Big0
+			if mode != LightSync {
+				lastFastBlock = d.blockchain.CurrentSnapBlock().Number
+				lastBlock = d.blockchain.CurrentBlock().Number
+			}
+			if err := d.lightchain.SetHead(rollback - 1); err != nil { // -1 to target the parent of the first uncertain block
+				// We're already unwinding the stack, only print the error to make it more visible
+				log.Error("Failed to roll back chain segment", "head", rollback-1, "err", err)
+			}
+			curFastBlock, curBlock := common.Big0, common.Big0
+			if mode != LightSync {
+				curFastBlock = d.blockchain.CurrentSnapBlock().Number
+				curBlock = d.blockchain.CurrentBlock().Number
+			}
+			log.Warn("Rolled back chain segment",
+				"header", fmt.Sprintf("%d->%d", lastHeader, d.lightchain.CurrentHeader().Number),
+				"snap", fmt.Sprintf("%d->%d", lastFastBlock, curFastBlock),
+				"block", fmt.Sprintf("%d->%d", lastBlock, curBlock), "reason", rollbackErr)
+		}
+	}()
+
 	for {
 		select {
 		case <-d.cancelCh:
@@ -1350,6 +1377,19 @@ func (d *Downloader) processHeaders(origin uint64, td, ttd *big.Int, beaconMode 
 
 				// In case of header only syncing, validate the chunk immediately
 				if mode == SnapSync || mode == LightSync {
+					// If we're importing pure headers, verify based on their recentness
+					var pivot uint64
+
+					d.pivotLock.RLock()
+					if d.pivotHeader != nil {
+						pivot = d.pivotHeader.Number.Uint64()
+					}
+					d.pivotLock.RUnlock()
+
+					frequency := fsHeaderCheckFrequency
+					if chunkHeaders[len(chunkHeaders)-1].Number.Uint64()+uint64(fsHeaderForceVerify) > pivot {
+						frequency = 1
+					}
 					// Although the received headers might be all valid, a legacy
 					// PoW/PoA sync must not accept post-merge headers. Make sure
 					// that any transition is rejected at this point.
@@ -1382,7 +1422,13 @@ func (d *Downloader) processHeaders(origin uint64, td, ttd *big.Int, beaconMode 
 						}
 					}
 					if len(chunkHeaders) > 0 {
-						if n, err := d.lightchain.InsertHeaderChain(chunkHeaders); err != nil {
+						if n, err := d.lightchain.InsertHeaderChain(chunkHeaders, frequency); err != nil {
+							rollbackErr = err
+
+							// If some headers were inserted, track them as uncertain
+							if (mode == SnapSync || frequency > 1) && n > 0 && rollback == 0 {
+								rollback = chunkHeaders[0].Number.Uint64()
+							}
 							log.Warn("Invalid header encountered", "number", chunkHeaders[n].Number, "hash", chunkHashes[n], "parent", chunkHeaders[n].ParentHash, "err", err)
 							return fmt.Errorf("%w: %v", errInvalidChain, err)
 						}

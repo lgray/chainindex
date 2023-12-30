@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
-package ethtest
+package ethtest_pow
 
 import "github.com/ethereum/go-ethereum/eth/protocols/snap"
 

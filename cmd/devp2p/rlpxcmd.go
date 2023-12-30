@@ -22,8 +22,10 @@ import (
 	"net"
 
 	"github.com/ethereum/go-ethereum/cmd/devp2p/internal/ethtest"
+	"github.com/ethereum/go-ethereum/cmd/devp2p/internal/ethtest_pow"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/rlpx"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/urfave/cli/v2"
@@ -38,7 +40,7 @@ var (
 			rlpxEthTestPoSCommand,
 			rlpxSnapTestPoSCommand,
 			rlpxEthTestPoWCommand,
-                        rlpxSnapTestPoWCommand,
+			rlpxSnapTestPoWCommand,
 		},
 	}
 	rlpxPingCommand = &cli.Command{
@@ -48,17 +50,45 @@ var (
 	}
 	rlpxEthTestPoSCommand = &cli.Command{
 		Name:      "eth-test-pos",
-		Usage:     "Runs tests against a node in PoS state",
-		ArgsUsage: "<node> <chain.rlp> <genesis.json>",
+		Usage:     "Runs eth protocol tests against a node in PoS state",
+		ArgsUsage: "<node>",
 		Action:    rlpxEthTest_PoS,
+		Flags: []cli.Flag{
+			testPatternFlag,
+			testTAPFlag,
+			testChainDirFlag,
+			testNodeFlag,
+			testNodeJWTFlag,
+			testNodeEngineFlag,
+		},
+	}
+	rlpxSnapTestPoSCommand = &cli.Command{
+		Name:      "snap-test-pos",
+		Usage:     "Runs snap protocol tests against a node in PoS state",
+		ArgsUsage: "",
+		Action:    rlpxSnapTest_PoS,
+		Flags: []cli.Flag{
+			testPatternFlag,
+			testTAPFlag,
+			testChainDirFlag,
+			testNodeFlag,
+			testNodeJWTFlag,
+			testNodeEngineFlag,
+		},
+	}
+	rlpxEthTestPoWCommand = &cli.Command{
+		Name:      "eth-test-pow",
+		Usage:     "Runs eth protocol tests against a node in PoW state",
+		ArgsUsage: "<node> <chain.rlp> <genesis.json>",
+		Action:    rlpxEthTest_PoW,
 		Flags: []cli.Flag{
 			testPatternFlag,
 			testTAPFlag,
 		},
 	}
-	rlpxSnapTestPoSCommand = &cli.Command{
-		Name:      "snap-test-pos",
-		Usage:     "Runs tests against a node in PoS state",
+	rlpxSnapTestPoWCommand = &cli.Command{
+		Name:      "snap-test-pow",
+		Usage:     "Runs snap protocol tests against a node in PoW state",
 		ArgsUsage: "<node> <chain.rlp> <genesis.json>",
 		Action:    rlpxSnapTest_PoW,
 		Flags: []cli.Flag{
@@ -66,26 +96,6 @@ var (
 			testTAPFlag,
 		},
 	}
-	rlpxEthTestPoWCommand = &cli.Command{
-                Name:      "eth-test-pow",
-                Usage:     "Runs tests against a node in PoW state",
-                ArgsUsage: "<node> <chain.rlp> <genesis.json>",
-                Action:    rlpxEthTest_PoS,
-		Flags: []cli.Flag{
-                        testPatternFlag,
-                        testTAPFlag,
-                },
-        }
-        rlpxSnapTestPoWCommand = &cli.Command{
-	        Name:      "snap-test-pow",
-	        Usage:     "Runs tests against a node in PoW state",
-		ArgsUsage: "<node> <chain.rlp> <genesis.json>",
-	        Action:    rlpxSnapTest_PoW,
-                Flags: []cli.Flag{
-                        testPatternFlag,
-			testTAPFlag,
-                },
-        }
 )
 
 func rlpxPing(ctx *cli.Context) error {
@@ -125,10 +135,8 @@ func rlpxPing(ctx *cli.Context) error {
 
 // rlpxEthTest runs the eth protocol test suite.
 func rlpxEthTest_PoS(ctx *cli.Context) error {
-	if ctx.NArg() < 3 {
-		exit("missing path to chain.rlp as command-line argument")
-	}
-	suite, err := ethtest.NewSuite(getNodeArg(ctx), ctx.Args().Get(1), ctx.Args().Get(2))
+	p := cliTestParams(ctx)
+	suite, err := ethtest.NewSuite(p.node, p.chainDir, p.engineAPI, p.jwt)
 	if err != nil {
 		exit(err)
 	}
@@ -137,10 +145,8 @@ func rlpxEthTest_PoS(ctx *cli.Context) error {
 
 // rlpxSnapTest runs the snap protocol test suite.
 func rlpxSnapTest_PoS(ctx *cli.Context) error {
-	if ctx.NArg() < 3 {
-		exit("missing path to chain.rlp as command-line argument")
-	}
-	suite, err := ethtest.NewSuite(getNodeArg(ctx), ctx.Args().Get(1), ctx.Args().Get(2))
+	p := cliTestParams(ctx)
+	suite, err := ethtest.NewSuite(p.node, p.chainDir, p.engineAPI, p.jwt)
 	if err != nil {
 		exit(err)
 	}
@@ -149,24 +155,58 @@ func rlpxSnapTest_PoS(ctx *cli.Context) error {
 
 // rlpxEthTest runs the eth protocol test suite.
 func rlpxEthTest_PoW(ctx *cli.Context) error {
-        if ctx.NArg() < 3 {
-                exit("missing path to chain.rlp as command-line argument")
-        }
-        suite, err := ethtest_pow.NewSuite(getNodeArg(ctx), ctx.Args().Get(1), ctx.Args().Get(2))
-        if err != nil {
-                exit(err)
-        }
-        return runTests(ctx, suite.EthTests())
+	if ctx.NArg() < 3 {
+		exit("missing path to chain.rlp as command-line argument")
+	}
+	suite, err := ethtest_pow.NewSuite(getNodeArg(ctx), ctx.Args().Get(1), ctx.Args().Get(2))
+	if err != nil {
+		exit(err)
+	}
+	return runTests(ctx, suite.EthTests())
 }
 
 // rlpxSnapTest runs the snap protocol test suite.
 func rlpxSnapTest_PoW(ctx *cli.Context) error {
-        if ctx.NArg() < 3 {
-                exit("missing path to chain.rlp as command-line argument")
-        }
-        suite, err := ethtest_pow.NewSuite(getNodeArg(ctx), ctx.Args().Get(1), ctx.Args().Get(2))
-        if err != nil {
-                exit(err)
-        }
-        return runTests(ctx, suite.SnapTests())
+	if ctx.NArg() < 3 {
+		exit("missing path to chain.rlp as command-line argument")
+	}
+	suite, err := ethtest_pow.NewSuite(getNodeArg(ctx), ctx.Args().Get(1), ctx.Args().Get(2))
+	if err != nil {
+		exit(err)
+	}
+	return runTests(ctx, suite.SnapTests())
+}
+
+type testParams struct {
+	node      *enode.Node
+	engineAPI string
+	jwt       string
+	chainDir  string
+}
+
+func cliTestParams(ctx *cli.Context) *testParams {
+	nodeStr := ctx.String(testNodeFlag.Name)
+	if nodeStr == "" {
+		exit(fmt.Errorf("missing -%s", testNodeFlag.Name))
+	}
+	node, err := parseNode(nodeStr)
+	if err != nil {
+		exit(err)
+	}
+	p := testParams{
+		node:      node,
+		engineAPI: ctx.String(testNodeEngineFlag.Name),
+		jwt:       ctx.String(testNodeJWTFlag.Name),
+		chainDir:  ctx.String(testChainDirFlag.Name),
+	}
+	if p.engineAPI == "" {
+		exit(fmt.Errorf("missing -%s", testNodeEngineFlag.Name))
+	}
+	if p.jwt == "" {
+		exit(fmt.Errorf("missing -%s", testNodeJWTFlag.Name))
+	}
+	if p.chainDir == "" {
+		exit(fmt.Errorf("missing -%s", testChainDirFlag.Name))
+	}
+	return &p
 }

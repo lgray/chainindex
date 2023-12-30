@@ -1,4 +1,4 @@
-name: i386 linux tests
+name: amd64 linux tests
 
 on:
   push:
@@ -15,9 +15,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.21.4
+          go-version: '>=1.21.4'
       - name: Run tests
-        run: go test ./...
+        run: make test
         env:
           GOOS: linux
-          GOARCH: 386
+          GOARCH: amd64

@@ -35,8 +35,10 @@ var (
 		Usage: "RLPx Commands",
 		Subcommands: []*cli.Command{
 			rlpxPingCommand,
-			rlpxEthTestCommand,
-			rlpxSnapTestCommand,
+			rlpxEthTestPoSCommand,
+			rlpxSnapTestPoSCommand,
+			rlpxEthTestPoWCommand,
+                        rlpxSnapTestPoWCommand,
 		},
 	}
 	rlpxPingCommand = &cli.Command{
@@ -44,26 +46,46 @@ var (
 		Usage:  "ping <node>",
 		Action: rlpxPing,
 	}
-	rlpxEthTestCommand = &cli.Command{
-		Name:      "eth-test",
-		Usage:     "Runs tests against a node",
+	rlpxEthTestPoSCommand = &cli.Command{
+		Name:      "eth-test-pos",
+		Usage:     "Runs tests against a node in PoS state",
 		ArgsUsage: "<node> <chain.rlp> <genesis.json>",
-		Action:    rlpxEthTest,
+		Action:    rlpxEthTest_PoS,
 		Flags: []cli.Flag{
 			testPatternFlag,
 			testTAPFlag,
 		},
 	}
-	rlpxSnapTestCommand = &cli.Command{
-		Name:      "snap-test",
-		Usage:     "Runs tests against a node",
+	rlpxSnapTestPoSCommand = &cli.Command{
+		Name:      "snap-test-pos",
+		Usage:     "Runs tests against a node in PoS state",
 		ArgsUsage: "<node> <chain.rlp> <genesis.json>",
-		Action:    rlpxSnapTest,
+		Action:    rlpxSnapTest_PoW,
 		Flags: []cli.Flag{
 			testPatternFlag,
 			testTAPFlag,
 		},
 	}
+	rlpxEthTestPoWCommand = &cli.Command{
+                Name:      "eth-test-pow",
+                Usage:     "Runs tests against a node in PoW state",
+                ArgsUsage: "<node> <chain.rlp> <genesis.json>",
+                Action:    rlpxEthTest_PoS,
+		Flags: []cli.Flag{
+                        testPatternFlag,
+                        testTAPFlag,
+                },
+        }
+        rlpxSnapTestPoWCommand = &cli.Command{
+	        Name:      "snap-test-pow",
+	        Usage:     "Runs tests against a node in PoW state",
+		ArgsUsage: "<node> <chain.rlp> <genesis.json>",
+	        Action:    rlpxSnapTest_PoW,
+                Flags: []cli.Flag{
+                        testPatternFlag,
+			testTAPFlag,
+                },
+        }
 )
 
 func rlpxPing(ctx *cli.Context) error {
@@ -102,7 +124,7 @@ func rlpxPing(ctx *cli.Context) error {
 }
 
 // rlpxEthTest runs the eth protocol test suite.
-func rlpxEthTest(ctx *cli.Context) error {
+func rlpxEthTest_PoS(ctx *cli.Context) error {
 	if ctx.NArg() < 3 {
 		exit("missing path to chain.rlp as command-line argument")
 	}
@@ -114,7 +136,7 @@ func rlpxEthTest(ctx *cli.Context) error {
 }
 
 // rlpxSnapTest runs the snap protocol test suite.
-func rlpxSnapTest(ctx *cli.Context) error {
+func rlpxSnapTest_PoS(ctx *cli.Context) error {
 	if ctx.NArg() < 3 {
 		exit("missing path to chain.rlp as command-line argument")
 	}
@@ -123,4 +145,28 @@ func rlpxSnapTest(ctx *cli.Context) error {
 		exit(err)
 	}
 	return runTests(ctx, suite.SnapTests())
+}
+
+// rlpxEthTest runs the eth protocol test suite.
+func rlpxEthTest_PoW(ctx *cli.Context) error {
+        if ctx.NArg() < 3 {
+                exit("missing path to chain.rlp as command-line argument")
+        }
+        suite, err := ethtest_pow.NewSuite(getNodeArg(ctx), ctx.Args().Get(1), ctx.Args().Get(2))
+        if err != nil {
+                exit(err)
+        }
+        return runTests(ctx, suite.EthTests())
+}
+
+// rlpxSnapTest runs the snap protocol test suite.
+func rlpxSnapTest_PoW(ctx *cli.Context) error {
+        if ctx.NArg() < 3 {
+                exit("missing path to chain.rlp as command-line argument")
+        }
+        suite, err := ethtest_pow.NewSuite(getNodeArg(ctx), ctx.Args().Get(1), ctx.Args().Get(2))
+        if err != nil {
+                exit(err)
+        }
+        return runTests(ctx, suite.SnapTests())
 }

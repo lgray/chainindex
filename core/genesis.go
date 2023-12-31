@@ -604,18 +604,6 @@ func DefaultSepoliaGenesisBlock() *Genesis {
 	}
 }
 
-// DefaultHoleskyGenesisBlock returns the Holesky network genesis block.
-func DefaultHoleskyGenesisBlock() *Genesis {
-	return &Genesis{
-		Config:     params.HoleskyChainConfig,
-		Nonce:      0x1234,
-		GasLimit:   0x17d7840,
-		Difficulty: big.NewInt(0x01),
-		Timestamp:  1695902100,
-		Alloc:      decodePrealloc(holeskyAllocData),
-	}
-}
-
 // DeveloperGenesisBlock returns the 'geth --dev' genesis block.
 func DeveloperGenesisBlock(gasLimit uint64, faucet *common.Address) *Genesis {
 	// Override the default period to the user requested one

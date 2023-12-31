@@ -30,6 +30,7 @@ import (
 
 // Constants to match up protocol versions and messages
 const (
+	ETH66 = 66
 	ETH67 = 67
 	ETH68 = 68
 )
@@ -125,6 +126,12 @@ type GetBlockHeadersRequest struct {
 
 // GetBlockHeadersPacket represents a block header query with request ID wrapping.
 type GetBlockHeadersPacket struct {
+	RequestId uint64
+	*GetBlockHeadersRequest
+}
+
+// GetBlockHeadersPacket represents a block header query with request ID wrapping.
+type GetBlockHeadersPacket66 struct {
 	RequestId uint64
 	*GetBlockHeadersRequest
 }

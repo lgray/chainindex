@@ -1,4 +1,4 @@
-name: amd64 linux tests
+name: CI
 
 on:
   push:

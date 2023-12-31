@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,3 +28,9 @@ jobs:
         env:
           GOOS: linux
           GOARCH: amd64
+
+  pass:
+    needs: [build-and-test]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "All jobs passed"

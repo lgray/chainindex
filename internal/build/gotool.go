@@ -138,14 +138,13 @@ func Version(csdb *ChecksumDB, version string) (string, error) {
 			continue
 		}
 		v := strings.Split(l, ":")[1]
-		v = strings.TrimSpace(v)
 		parts := strings.Split(v, " ")
 		if len(parts) != 2 {
 			log.Print("Erroneous version-string", "v", l)
 			continue
 		}
 		if parts[0] == version {
-			return parts[1], nil
+			return strings.TrimSpace(parts[1]), nil
 		}
 	}
 	return "", fmt.Errorf("no version found for '%v'", version)

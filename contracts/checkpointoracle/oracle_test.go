@@ -18,6 +18,7 @@ package checkpointoracle
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
@@ -28,11 +29,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/checkpointoracle/contract"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient/simulated"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -69,7 +70,7 @@ var (
 
 // validateOperation executes the operation, watches and delivers all events fired by the backend and ensures the
 // correctness by assert function.
-func validateOperation(t *testing.T, c *contract.CheckpointOracle, backend *backends.SimulatedBackend, operation func(),
+func validateOperation(t *testing.T, c *contract.CheckpointOracle, backend *simulated.Backend, operation func(),
 	assert func(<-chan *contract.CheckpointOracleNewCheckpointVote) error, opName string) {
 	// Watch all events and deliver them to assert function
 	var (
@@ -175,7 +176,7 @@ func TestCheckpointRegister(t *testing.T) {
 	sort.Sort(accounts)
 
 	// Deploy registrar contract
-	contractBackend := backends.NewSimulatedBackend(
+	contractBackend := simulated.New(
 		core.GenesisAlloc{
 			accounts[0].addr: {Balance: big.NewInt(10000000000000000)},
 			accounts[1].addr: {Balance: big.NewInt(10000000000000000)},
@@ -187,7 +188,7 @@ func TestCheckpointRegister(t *testing.T) {
 	transactOpts, _ := bind.NewKeyedTransactorWithChainID(accounts[0].key, big.NewInt(1337))
 
 	// 3 trusted signers, threshold 2
-	contractAddr, _, c, err := contract.DeployCheckpointOracle(transactOpts, contractBackend, []common.Address{accounts[0].addr, accounts[1].addr, accounts[2].addr}, sectionSize, processConfirms, big.NewInt(2))
+	contractAddr, _, c, err := contract.DeployCheckpointOracle(transactOpts, contractBackend.Client(), []common.Address{accounts[0].addr, accounts[1].addr, accounts[2].addr}, sectionSize, processConfirms, big.NewInt(2))
 	if err != nil {
 		t.Error("Failed to deploy registrar contract", err)
 	}
@@ -195,9 +196,16 @@ func TestCheckpointRegister(t *testing.T) {
 
 	// getRecent returns block height and hash of the head parent.
 	getRecent := func() (*big.Int, common.Hash) {
-		parentNumber := new(big.Int).Sub(contractBackend.Blockchain().CurrentHeader().Number, big.NewInt(1))
-		parentHash := contractBackend.Blockchain().CurrentHeader().ParentHash
-		return parentNumber, parentHash
+		latestNumber, err := contractBackend.Client().BlockNumber(context.Background())
+		if err != nil {
+			t.Errorf("err %s", err)
+		}
+		parentNumber := new(big.Int).Sub(new(big.Int).SetUint64(latestNumber), big.NewInt(1))
+		parentHeader, err := contractBackend.Client().HeaderByNumber(context.Background(), nil)
+		if err != nil {
+			t.Errorf("err %s", err)
+		}
+		return parentNumber, parentHeader.ParentHash
 	}
 	// collectSig generates specified number signatures.
 	collectSig := func(index uint64, hash common.Hash, n int, unauthorized *ecdsa.PrivateKey) (v []uint8, r [][32]byte, s [][32]byte) {
@@ -297,7 +305,11 @@ func TestCheckpointRegister(t *testing.T) {
 		return assert(0, checkpoint0.Hash(), number.Add(number, big.NewInt(1)))
 	}, "test valid checkpoint registration")
 
-	distance := 3*sectionSize.Uint64() + processConfirms.Uint64() - contractBackend.Blockchain().CurrentHeader().Number.Uint64()
+	latestNumber, err := contractBackend.Client().BlockNumber(context.Background())
+	if err != nil {
+		t.Errorf("err %s", err)
+	}
+	distance := 3*sectionSize.Uint64() + processConfirms.Uint64() - latestNumber
 	insertEmptyBlocks(int(distance))
 
 	// Test uncontinuous checkpoint registration

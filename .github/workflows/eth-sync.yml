@@ -14,5 +14,4 @@ jobs:
       - uses: actions/checkout@v5
       - name: pull-request
         run: |
-          gh_pr_up() { gh pr create $* || gh pr edit $* }
-          gh_pr_up --title "chore: sync eth upstream" --body "" --assignee '@lgray' --base master --head go-ethereum:master
+          gh pr create --title "chore: sync eth downstream" --body "" --assignee 'lgray' --base master --head ethereum:master || sleep 1

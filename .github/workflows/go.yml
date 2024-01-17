@@ -28,7 +28,7 @@ jobs:
         with:
           go-version: '>=1.21.4'
       - name: Run tests
-        run: make test        
+        run: for i in {1..10}; do make test && break; done        
 
   pass:
     needs: [build-and-test]

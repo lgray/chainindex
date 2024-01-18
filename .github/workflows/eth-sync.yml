@@ -1,0 +1,17 @@
+on:
+  workflow_dispatch:
+  # run every Monday at noon UTC
+  schedule:
+    - cron:  '0 12 * * 1'
+
+permissions:
+  pull-requests: write
+
+jobs:
+  pull-request:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: pull-request
+        run: |
+          gh pr create --title "chore: sync eth downstream" --body "" --assignee 'lgray' --base master --head ethereum:master || sleep 1

@@ -1,3 +1,5 @@
+name: PR Bot
+
 on:
   workflow_dispatch:
   # run every Monday at noon UTC
@@ -11,7 +13,7 @@ jobs:
   pull-request:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - name: pull-request
         run: |
           gh pr create --title "chore: sync eth downstream" --body "" --assignee 'lgray' --base master --head ethereum:master || sleep 1

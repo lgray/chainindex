@@ -1,7 +1,6 @@
 name: PR Bot
 
 on:
-  workflow_dispatch:
   # run every Monday at noon UTC
   schedule:
     - cron:  '0 12 * * 1'

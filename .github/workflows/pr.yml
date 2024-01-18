@@ -6,7 +6,6 @@ on:
       - opened
       - edited
       - synchronize
-  workflow_dispatch:
 
 concurrency:
   group: semantic-pr-title-${{ github.head_ref }}

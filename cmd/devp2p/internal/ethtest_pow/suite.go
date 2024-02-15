@@ -535,7 +535,7 @@ func (s *Suite) TestNewPooledTxs(t *utesting.T) {
 
 	var ann Message = NewPooledTransactionHashes{Types: types, Sizes: sizes, Hashes: hashes}
 	if conn.negotiatedProtoVersion < eth.ETH68 {
-		ann = NewPooledTransactionHashes66(hashes)
+		ann = NewPooledTransactionHashes66{Types: types, Sizes: sizes, Hashes: hashes}
 	}
 	err = conn.Write(ann)
 	if err != nil {

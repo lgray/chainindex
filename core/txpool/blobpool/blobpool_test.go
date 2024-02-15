@@ -567,7 +567,7 @@ func TestOpenDrops(t *testing.T) {
 		statedb: statedb,
 	}
 	pool := New(Config{Datadir: storage}, chain)
-	if err := pool.Init(big.NewInt(1), chain.CurrentBlock(), makeAddressReserver()); err != nil {
+	if err := pool.Init(1, chain.CurrentBlock(), makeAddressReserver()); err != nil {
 		t.Fatalf("failed to create blob pool: %v", err)
 	}
 	defer pool.Close()
@@ -635,7 +635,7 @@ func TestOpenDrops(t *testing.T) {
 
 // Tests that transactions loaded from disk are indexed correctly.
 //
-//   - 1. Transactions must be groupped by sender, sorted by nonce
+//   - 1. Transactions must be grouped by sender, sorted by nonce
 //   - 2. Eviction thresholds are calculated correctly for the sequences
 //   - 3. Balance usage of an account is totals across all transactions
 func TestOpenIndex(t *testing.T) {
@@ -649,7 +649,7 @@ func TestOpenIndex(t *testing.T) {
 	store, _ := billy.Open(billy.Options{Path: filepath.Join(storage, pendingTransactionStore)}, newSlotter(), nil)
 
 	// Insert a sequence of transactions with varying price points to check that
-	// the cumulative minimumw will be maintained.
+	// the cumulative minimum will be maintained.
 	var (
 		key, _ = crypto.GenerateKey()
 		addr   = crypto.PubkeyToAddress(key.PublicKey)
@@ -686,7 +686,7 @@ func TestOpenIndex(t *testing.T) {
 		statedb: statedb,
 	}
 	pool := New(Config{Datadir: storage}, chain)
-	if err := pool.Init(big.NewInt(1), chain.CurrentBlock(), makeAddressReserver()); err != nil {
+	if err := pool.Init(1, chain.CurrentBlock(), makeAddressReserver()); err != nil {
 		t.Fatalf("failed to create blob pool: %v", err)
 	}
 	defer pool.Close()
@@ -788,7 +788,7 @@ func TestOpenHeap(t *testing.T) {
 		statedb: statedb,
 	}
 	pool := New(Config{Datadir: storage}, chain)
-	if err := pool.Init(big.NewInt(1), chain.CurrentBlock(), makeAddressReserver()); err != nil {
+	if err := pool.Init(1, chain.CurrentBlock(), makeAddressReserver()); err != nil {
 		t.Fatalf("failed to create blob pool: %v", err)
 	}
 	defer pool.Close()
@@ -868,7 +868,7 @@ func TestOpenCap(t *testing.T) {
 			statedb: statedb,
 		}
 		pool := New(Config{Datadir: storage, Datacap: datacap}, chain)
-		if err := pool.Init(big.NewInt(1), chain.CurrentBlock(), makeAddressReserver()); err != nil {
+		if err := pool.Init(1, chain.CurrentBlock(), makeAddressReserver()); err != nil {
 			t.Fatalf("failed to create blob pool: %v", err)
 		}
 		// Verify that enough transactions have been dropped to get the pool's size
@@ -1248,7 +1248,7 @@ func TestAdd(t *testing.T) {
 			keys[acc], _ = crypto.GenerateKey()
 			addrs[acc] = crypto.PubkeyToAddress(keys[acc].PublicKey)
 
-			// Seed the state database with this acocunt
+			// Seed the state database with this account
 			statedb.AddBalance(addrs[acc], new(uint256.Int).SetUint64(seed.balance))
 			statedb.SetNonce(addrs[acc], seed.nonce)
 
@@ -1270,7 +1270,7 @@ func TestAdd(t *testing.T) {
 			statedb: statedb,
 		}
 		pool := New(Config{Datadir: storage}, chain)
-		if err := pool.Init(big.NewInt(1), chain.CurrentBlock(), makeAddressReserver()); err != nil {
+		if err := pool.Init(1, chain.CurrentBlock(), makeAddressReserver()); err != nil {
 			t.Fatalf("test %d: failed to create blob pool: %v", i, err)
 		}
 		verifyPoolInternals(t, pool)

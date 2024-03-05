@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/internal/utesting"
@@ -118,6 +119,7 @@ func setupGeth(stack *node.Node) error {
 		TrieDirtyCache: 16,
 		TrieTimeout:    60 * time.Minute,
 		SnapshotCache:  10,
+		StateScheme:    rawdb.HashScheme,
 	})
 	if err != nil {
 		return err

@@ -31,7 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/checkpointoracle/contract"
-	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient/simulated"
 	"github.com/ethereum/go-ethereum/params"
@@ -177,7 +177,7 @@ func TestCheckpointRegister(t *testing.T) {
 
 	// Deploy registrar contract
 	contractBackend := simulated.NewBackend(
-		core.GenesisAlloc{
+		types.GenesisAlloc{
 			accounts[0].addr: {Balance: big.NewInt(10000000000000000)},
 			accounts[1].addr: {Balance: big.NewInt(10000000000000000)},
 			accounts[2].addr: {Balance: big.NewInt(10000000000000000)},
